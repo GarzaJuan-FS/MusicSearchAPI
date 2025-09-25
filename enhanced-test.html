@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Music Search API</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        margin: 20px;
+        background: #191414;
+        color: white;
+      }
+      .container {
+        max-width: 1200px;
+        margin: 0 auto;
+      }
+      button {
+        padding: 10px 20px;
+        margin: 5px;
+        background: #1db954;
+        color: white;
+        border: none;
+        border-radius: 25px;
+        cursor: pointer;
+        font-weight: bold;
+      }
+      button:hover {
+        background: #1ed760;
+      }
+      button:disabled {
+        background: #535353;
+        cursor: not-allowed;
+      }
+      .section {
+        margin: 30px 0;
+        padding: 20px;
+        background: #282828;
+        border-radius: 10px;
+      }
+      .result {
+        margin: 20px 0;
+        padding: 15px;
+        background: #121212;
+        border-radius: 8px;
+        border-left: 4px solid #1db954;
+      }
+      .token-display {
+        word-break: break-all;
+        font-family: monospace;
+        font-size: 11px;
+        background: #000;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      input,
+      select {
+        padding: 8px;
+        margin: 5px;
+        border: 1px solid #535353;
+        background: #404040;
+        color: white;
+        border-radius: 5px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 20px;
+      }
+      .card {
+        background: #1a1a1a;
+        padding: 15px;
+        border-radius: 8px;
+        border: 1px solid #333;
+      }
+      .auth-status {
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+      .auth-valid {
+        background: #1db954;
+        color: white;
+      }
+      .auth-invalid {
+        background: #e22134;
+        color: white;
+      }
+      .track-item,
+      .playlist-item {
+        background: #2a2a2a;
+        margin: 10px 0;
+        padding: 15px;
+        border-radius: 8px;
+        border-left: 3px solid #1db954;
+      }
+      .error {
+        color: #e22134;
+        background: #2a1a1a;
+        padding: 10px;
+        border-radius: 5px;
+        margin: 10px 0;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>🎵 Enhanced Music Search API Test</h1>
+
+      <!-- Authentication Status -->
+      <div class="section">
+        <h2>Authentication Status</h2>
+        <button onclick="checkAuthStatus()">Check Auth Status</button>
+        <button onclick="validateToken()">Validate Token</button>
+        <button onclick="refreshToken()">Refresh Token</button>
+        <div id="auth-status-display"></div>
+      </div>
+
+      <!-- Authentication Actions -->
+      <div class="section">
+        <h2>Authentication</h2>
+        <button onclick="login()">Login with Spotify</button>
+        <button onclick="logout()">Logout</button>
+        <button onclick="getProfile()">Get My Profile</button>
+
+        <div id="token-info" class="result" style="display: none">
+          <h3>JWT Token:</h3>
+          <div id="token-display" class="token-display"></div>
+        </div>
+      </div>
+
+      <!-- Search Section -->
+      <div class="section">
+        <h2>Search Music</h2>
+        <div>
+          <input
+            type="text"
+            id="searchQuery"
+            placeholder="Enter search query"
+            style="width: 300px"
+          />
+          <select id="searchType">
+            <option value="track">Track</option>
+            <option value="artist">Artist</option>
+            <option value="album">Album</option>
+            <option value="playlist">Playlist</option>
+          </select>
+          <input
+            type="number"
+            id="searchLimit"
+            placeholder="Limit"
+            value="10"
+            style="width: 80px"
+          />
+          <button onclick="searchMusic()">Search</button>
+        </div>
+        <div id="search-results" class="result"></div>
+      </div>
+
+      <!-- User's Music Data -->
+      <div class="grid">
+        <!-- User's Playlists -->
+        <div class="section">
+          <h2>My Playlists</h2>
+          <button onclick="getPlaylists()">Load My Playlists</button>
+          <div id="playlists-results" class="result"></div>
+        </div>
+
+        <!-- Top Tracks/Artists -->
+        <div class="section">
+          <h2>My Top Items</h2>
+          <select id="topType">
+            <option value="tracks">Top Tracks</option>
+            <option value="artists">Top Artists</option>
+          </select>
+          <select id="timeRange">
+            <option value="short_term">4 Weeks</option>
+            <option value="medium_term" selected>6 Months</option>
+            <option value="long_term">All Time</option>
+          </select>
+          <button onclick="getTopItems()">Load Top Items</button>
+          <div id="top-results" class="result"></div>
+        </div>
+
+        <!-- Recently Played -->
+        <div class="section">
+          <h2>Recently Played</h2>
+          <button onclick="getRecentlyPlayed()">Load Recently Played</button>
+          <div id="recent-results" class="result"></div>
+        </div>
+
+        <!-- Recommendations -->
+        <div class="section">
+          <h2>Recommendations</h2>
+          <input
+            type="text"
+            id="seedArtists"
+            placeholder="Artist IDs (comma-separated)"
+          />
+          <input
+            type="text"
+            id="seedTracks"
+            placeholder="Track IDs (comma-separated)"
+          />
+          <input
+            type="text"
+            id="seedGenres"
+            placeholder="Genres (comma-separated)"
+          />
+          <button onclick="getRecommendations()">Get Recommendations</button>
+          <div id="recommendations-results" class="result"></div>
+        </div>
+      </div>
+
+      <!-- Artist/Track Details -->
+      <div class="section">
+        <h2>Get Item Details</h2>
+        <select id="itemType">
+          <option value="track">Track</option>
+          <option value="artist">Artist</option>
+          <option value="album">Album</option>
+        </select>
+        <input type="text" id="itemId" placeholder="Spotify ID" />
+        <button onclick="getItemDetails()">Get Details</button>
+        <div id="item-details" class="result"></div>
+      </div>
+    </div>
+
+    <script>
+      const API_BASE = "http://localhost:3000";
+      let authToken = localStorage.getItem("spotify_token");
+
+      // Check for token in URL (from OAuth callback)
+      const urlParams = new URLSearchParams(window.location.search);
+      const tokenFromUrl = urlParams.get("token");
+      if (tokenFromUrl) {
+        authToken = tokenFromUrl;
+        localStorage.setItem("spotify_token", authToken);
+        displayToken();
+        // Clean URL
+        window.history.replaceState(
+          {},
+          document.title,
+          window.location.pathname
+        );
+      }
+
+      function displayToken() {
+        if (authToken) {
+          document.getElementById("token-display").textContent = authToken;
+          document.getElementById("token-info").style.display = "block";
+        }
+      }
+
+      function displayError(message, containerId) {
+        document.getElementById(
+          containerId
+        ).innerHTML = `<div class="error">Error: ${message}</div>`;
+      }
+
+      function makeRequest(url, method = "GET") {
+        const options = {
+          method,
+          headers: {},
+        };
+
+        if (authToken) {
+          options.headers["Authorization"] = `Bearer ${authToken}`;
+        }
+
+        return fetch(`${API_BASE}${url}`, options).then((response) =>
+          response.json()
+        );
+      }
+
+      // Authentication functions
+      function login() {
+        window.location.href = `${API_BASE}/auth/spotify`;
+      }
+
+      function logout() {
+        makeRequest("/logout", "POST")
+          .then((data) => {
+            localStorage.removeItem("spotify_token");
+            authToken = null;
+            document.getElementById("token-info").style.display = "none";
+            alert("Logged out successfully");
+          })
+          .catch((error) => console.error("Logout error:", error));
+      }
+
+      function checkAuthStatus() {
+        makeRequest("/auth/status")
+          .then((data) => {
+            const statusDiv = document.getElementById("auth-status-display");
+            const statusClass = data.authenticated
+              ? "auth-valid"
+              : "auth-invalid";
+            statusDiv.innerHTML = `
+              <div class="auth-status ${statusClass}">
+                <strong>Authenticated:</strong> ${data.authenticated}<br>
+                <strong>Needs Login:</strong> ${data.needsLogin}<br>
+                <strong>Token Expired:</strong> ${
+                  data.tokenExpired || false
+                }<br>
+                <strong>JWT Expired:</strong> ${data.jwtExpired || false}
+                ${
+                  data.reason
+                    ? `<br><strong>Reason:</strong> ${data.reason}`
+                    : ""
+                }
+              </div>
+            `;
+          })
+          .catch((error) =>
+            displayError("Failed to check auth status", "auth-status-display")
+          );
+      }
+
+      function validateToken() {
+        makeRequest("/auth/validate")
+          .then((data) => {
+            const statusDiv = document.getElementById("auth-status-display");
+            statusDiv.innerHTML = `
+              <div class="auth-status auth-valid">
+                <strong>Token Valid:</strong> ${data.valid}<br>
+                <strong>User:</strong> ${data.user.display_name} (${data.user.email})<br>
+                <strong>Spotify Token Expired:</strong> ${data.tokenExpired}
+              </div>
+            `;
+          })
+          .catch((error) =>
+            displayError("Token validation failed", "auth-status-display")
+          );
+      }
+
+      function refreshToken() {
+        makeRequest("/auth/refresh", "POST")
+          .then((data) => {
+            alert("Token refreshed successfully");
+          })
+          .catch((error) =>
+            displayError("Token refresh failed", "auth-status-display")
+          );
+      }
+
+      function getProfile() {
+        makeRequest("/me")
+          .then((data) => {
+            document.getElementById("search-results").innerHTML = `
+              <h3>Your Profile:</h3>
+              <div class="card">
+                <p><strong>Name:</strong> ${data.display_name}</p>
+                <p><strong>Email:</strong> ${data.email}</p>
+                <p><strong>Country:</strong> ${data.country}</p>
+                <p><strong>Product:</strong> ${data.product}</p>
+                <p><strong>Followers:</strong> ${data.followers.total}</p>
+              </div>
+            `;
+          })
+          .catch((error) =>
+            displayError("Failed to get profile", "search-results")
+          );
+      }
+
+      // Music functions
+      function searchMusic() {
+        const query = document.getElementById("searchQuery").value;
+        const type = document.getElementById("searchType").value;
+        const limit = document.getElementById("searchLimit").value || 10;
+
+        if (!query) {
+          alert("Please enter a search query");
+          return;
+        }
+
+        makeRequest(
+          `/search?q=${encodeURIComponent(query)}&type=${type}&limit=${limit}`
+        )
+          .then((data) => {
+            displaySearchResults(data, type);
+          })
+          .catch((error) => displayError("Search failed", "search-results"));
+      }
+
+      function displaySearchResults(data, type) {
+        const resultsDiv = document.getElementById("search-results");
+        const items = data[type + "s"]?.items || [];
+
+        if (items.length === 0) {
+          resultsDiv.innerHTML = "<p>No results found</p>";
+          return;
+        }
+
+        let html = `<h3>Search Results (${type}s):</h3>`;
+
+        items.forEach((item) => {
+          if (type === "track") {
+            html += `
+              <div class="track-item">
+                <strong>${item.name}</strong> by ${item.artists[0].name}<br>
+                Album: ${item.album.name}<br>
+                <small>ID: ${item.id}</small>
+                ${
+                  item.preview_url
+                    ? `<br><audio controls><source src="${item.preview_url}"></audio>`
+                    : ""
+                }
+              </div>
+            `;
+          } else if (type === "artist") {
+            html += `
+              <div class="track-item">
+                <strong>${item.name}</strong><br>
+                Followers: ${item.followers.total}<br>
+                Genres: ${item.genres.join(", ")}<br>
+                <small>ID: ${item.id}</small>
+              </div>
+            `;
+          } else if (type === "album") {
+            html += `
+              <div class="track-item">
+                <strong>${item.name}</strong> by ${item.artists[0].name}<br>
+                Release: ${item.release_date}<br>
+                Tracks: ${item.total_tracks}<br>
+                <small>ID: ${item.id}</small>
+              </div>
+            `;
+          }
+        });
+
+        resultsDiv.innerHTML = html;
+      }
+
+      function getPlaylists() {
+        makeRequest("/api/playlists?limit=10")
+          .then((data) => {
+            const resultsDiv = document.getElementById("playlists-results");
+            if (data.items && data.items.length > 0) {
+              let html = "<h4>Your Playlists:</h4>";
+              data.items.forEach((playlist) => {
+                html += `
+                  <div class="playlist-item">
+                    <strong>${playlist.name}</strong><br>
+                    Tracks: ${playlist.tracks.total}<br>
+                    <small>ID: ${playlist.id}</small>
+                    <button onclick="getPlaylistTracks('${playlist.id}')" style="margin-top: 10px;">Get Tracks</button>
+                  </div>
+                `;
+              });
+              resultsDiv.innerHTML = html;
+            } else {
+              resultsDiv.innerHTML = "<p>No playlists found</p>";
+            }
+          })
+          .catch((error) =>
+            displayError("Failed to get playlists", "playlists-results")
+          );
+      }
+
+      function getPlaylistTracks(playlistId) {
+        makeRequest(`/api/playlists/${playlistId}/tracks?limit=5`)
+          .then((data) => {
+            const resultsDiv = document.getElementById("playlists-results");
+            if (data.items && data.items.length > 0) {
+              let html = "<h4>Playlist Tracks:</h4>";
+              data.items.forEach((item) => {
+                const track = item.track;
+                html += `
+                  <div class="track-item">
+                    <strong>${track.name}</strong> by ${track.artists[0].name}
+                  </div>
+                `;
+              });
+              resultsDiv.innerHTML = html;
+            } else {
+              resultsDiv.innerHTML = "<p>No tracks found</p>";
+            }
+          })
+          .catch((error) =>
+            displayError("Failed to get playlist tracks", "playlists-results")
+          );
+      }
+
+      function getTopItems() {
+        const type = document.getElementById("topType").value;
+        const timeRange = document.getElementById("timeRange").value;
+
+        makeRequest(`/api/top/${type}?time_range=${timeRange}&limit=10`)
+          .then((data) => {
+            const resultsDiv = document.getElementById("top-results");
+            if (data.items && data.items.length > 0) {
+              let html = `<h4>Your Top ${type}:</h4>`;
+              data.items.forEach((item, index) => {
+                html += `
+                  <div class="track-item">
+                    <strong>#${index + 1}</strong> ${item.name}
+                    ${type === "tracks" ? ` by ${item.artists[0].name}` : ""}
+                    <br><small>ID: ${item.id}</small>
+                  </div>
+                `;
+              });
+              resultsDiv.innerHTML = html;
+            } else {
+              resultsDiv.innerHTML = "<p>No top items found</p>";
+            }
+          })
+          .catch((error) =>
+            displayError("Failed to get top items", "top-results")
+          );
+      }
+
+      function getRecentlyPlayed() {
+        makeRequest("/api/recently-played?limit=10")
+          .then((data) => {
+            const resultsDiv = document.getElementById("recent-results");
+            if (data.items && data.items.length > 0) {
+              let html = "<h4>Recently Played:</h4>";
+              data.items.forEach((item) => {
+                const track = item.track;
+                html += `
+                  <div class="track-item">
+                    <strong>${track.name}</strong> by ${
+                  track.artists[0].name
+                }<br>
+                    Played: ${new Date(item.played_at).toLocaleString()}
+                  </div>
+                `;
+              });
+              resultsDiv.innerHTML = html;
+            } else {
+              resultsDiv.innerHTML = "<p>No recently played tracks found</p>";
+            }
+          })
+          .catch((error) =>
+            displayError("Failed to get recently played", "recent-results")
+          );
+      }
+
+      function getRecommendations() {
+        const seedArtists = document.getElementById("seedArtists").value;
+        const seedTracks = document.getElementById("seedTracks").value;
+        const seedGenres = document.getElementById("seedGenres").value;
+
+        if (!seedArtists && !seedTracks && !seedGenres) {
+          alert("Please enter at least one seed parameter");
+          return;
+        }
+
+        let url = "/api/recommendations?limit=5";
+        if (seedArtists) url += `&seed_artists=${seedArtists}`;
+        if (seedTracks) url += `&seed_tracks=${seedTracks}`;
+        if (seedGenres) url += `&seed_genres=${seedGenres}`;
+
+        makeRequest(url)
+          .then((data) => {
+            const resultsDiv = document.getElementById(
+              "recommendations-results"
+            );
+            if (data.tracks && data.tracks.length > 0) {
+              let html = "<h4>Recommendations:</h4>";
+              data.tracks.forEach((track) => {
+                html += `
+                  <div class="track-item">
+                    <strong>${track.name}</strong> by ${track.artists[0].name}<br>
+                    Album: ${track.album.name}
+                  </div>
+                `;
+              });
+              resultsDiv.innerHTML = html;
+            } else {
+              resultsDiv.innerHTML = "<p>No recommendations found</p>";
+            }
+          })
+          .catch((error) =>
+            displayError(
+              "Failed to get recommendations",
+              "recommendations-results"
+            )
+          );
+      }
+
+      function getItemDetails() {
+        const type = document.getElementById("itemType").value;
+        const id = document.getElementById("itemId").value;
+
+        if (!id) {
+          alert("Please enter a Spotify ID");
+          return;
+        }
+
+        makeRequest(`/api/${type}/${id}`)
+          .then((data) => {
+            const resultsDiv = document.getElementById("item-details");
+            let html = `<h4>${
+              type.charAt(0).toUpperCase() + type.slice(1)
+            } Details:</h4><div class="card">`;
+
+            if (type === "track") {
+              html += `
+                <p><strong>Name:</strong> ${data.name}</p>
+                <p><strong>Artist:</strong> ${data.artists[0].name}</p>
+                <p><strong>Album:</strong> ${data.album.name}</p>
+                <p><strong>Duration:</strong> ${Math.floor(
+                  data.duration_ms / 60000
+                )}:${String(
+                Math.floor((data.duration_ms % 60000) / 1000)
+              ).padStart(2, "0")}</p>
+                <p><strong>Popularity:</strong> ${data.popularity}/100</p>
+              `;
+            } else if (type === "artist") {
+              html += `
+                <p><strong>Name:</strong> ${data.name}</p>
+                <p><strong>Followers:</strong> ${data.followers.total}</p>
+                <p><strong>Genres:</strong> ${data.genres.join(", ")}</p>
+                <p><strong>Popularity:</strong> ${data.popularity}/100</p>
+              `;
+            } else if (type === "album") {
+              html += `
+                <p><strong>Name:</strong> ${data.name}</p>
+                <p><strong>Artist:</strong> ${data.artists[0].name}</p>
+                <p><strong>Release Date:</strong> ${data.release_date}</p>
+                <p><strong>Total Tracks:</strong> ${data.total_tracks}</p>
+              `;
+            }
+
+            html += "</div>";
+            resultsDiv.innerHTML = html;
+          })
+          .catch((error) =>
+            displayError("Failed to get item details", "item-details")
+          );
+      }
+
+      // Initialize
+      displayToken();
+      if (authToken) {
+        checkAuthStatus();
+      }
+    </script>
+  </body>
+</html>

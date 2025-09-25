@@ -119,10 +119,189 @@ const generateRandomString = (length) => {
   return result;
 };
 
+// Get user's playlists
+const getUserPlaylists = async (accessToken, limit = 20, offset = 0) => {
+  try {
+    const response = await axios.get(
+      "https://api.spotify.com/v1/me/playlists",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          limit,
+          offset,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error("Failed to get user playlists");
+  }
+};
+
+// Get playlist tracks
+const getPlaylistTracks = async (accessToken, playlistId, limit = 50) => {
+  try {
+    const response = await axios.get(
+      `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          limit,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error("Failed to get playlist tracks");
+  }
+};
+
+// Get user's top tracks/artists
+const getUserTop = async (
+  accessToken,
+  type = "tracks",
+  timeRange = "medium_term",
+  limit = 20
+) => {
+  try {
+    const response = await axios.get(
+      `https://api.spotify.com/v1/me/top/${type}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          time_range: timeRange, // short_term, medium_term, long_term
+          limit,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error(`Failed to get user's top ${type}`);
+  }
+};
+
+// Get user's recently played tracks
+const getRecentlyPlayed = async (accessToken, limit = 20) => {
+  try {
+    const response = await axios.get(
+      "https://api.spotify.com/v1/me/player/recently-played",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          limit,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error("Failed to get recently played tracks");
+  }
+};
+
+// Get track/album/artist details
+const getSpotifyItem = async (accessToken, itemType, itemId) => {
+  try {
+    const response = await axios.get(
+      `https://api.spotify.com/v1/${itemType}s/${itemId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error(`Failed to get ${itemType} details`);
+  }
+};
+
+// Get artist's albums
+const getArtistAlbums = async (accessToken, artistId, limit = 20) => {
+  try {
+    const response = await axios.get(
+      `https://api.spotify.com/v1/artists/${artistId}/albums`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          include_groups: "album,single",
+          limit,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error("Failed to get artist albums");
+  }
+};
+
+// Get artist's top tracks
+const getArtistTopTracks = async (accessToken, artistId, market = "US") => {
+  try {
+    const response = await axios.get(
+      `https://api.spotify.com/v1/artists/${artistId}/top-tracks`,
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params: {
+          market,
+        },
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error("Failed to get artist top tracks");
+  }
+};
+
+// Get recommendations
+const getRecommendations = async (accessToken, params) => {
+  try {
+    const response = await axios.get(
+      "https://api.spotify.com/v1/recommendations",
+      {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        params,
+      }
+    );
+
+    return response.data;
+  } catch (error) {
+    throw new Error("Failed to get recommendations");
+  }
+};
+
 module.exports = {
   getSpotifyAuthURL,
   exchangeCodeForToken,
   getSpotifyUserProfile,
   searchSpotify,
   refreshAccessToken,
+  getUserPlaylists,
+  getPlaylistTracks,
+  getUserTop,
+  getRecentlyPlayed,
+  getSpotifyItem,
+  getArtistAlbums,
+  getArtistTopTracks,
+  getRecommendations,
 };
