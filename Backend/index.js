@@ -1,4 +1,6 @@
-require("dotenv").config();
+require("dotenv").config({ path: "../.env" });
+console.log("SPOTIFY_CLIENT_ID loaded:", process.env.SPOTIFY_CLIENT_ID);
+console.log("SPOTIFY_REDIRECT_URI loaded:", process.env.SPOTIFY_REDIRECT_URI);
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
@@ -38,12 +40,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
-  res.send("MusicSearchAPI is running!");
-});
-
-// Serve test page
-app.get("/test.html", (req, res) => {
-  res.sendFile(path.join(__dirname, "test.html"));
+  if (process.env.NODE_ENV === "production") {
+    res.sendFile(path.join(__dirname, "../Frontend/client/dist/index.html"));
+  } else {
+    res.json({
+      message: "Spotify Music Search API",
+      frontend: "http://localhost:3001 (React development server)",
+      api: `http://localhost:${port}`,
+    });
+  }
 });
 
 // Serve enhanced test page
@@ -54,6 +59,7 @@ app.get("/enhanced-test.html", (req, res) => {
 // Auth routes
 app.get("/auth/spotify", (req, res) => {
   const authURL = getSpotifyAuthURL();
+  console.log("Generated Spotify auth URL:", authURL);
   res.redirect(authURL);
 });
 
@@ -87,7 +93,7 @@ app.get("/auth/spotify/callback", async (req, res) => {
     const jwt = generateJWT(userProfile.id, userProfile.id);
 
     // Redirect to frontend with token
-    res.redirect(`${process.env.FRONTEND_URL}/auth/success?token=${jwt}`);
+    res.redirect(`http://127.0.0.1:3001?token=${jwt}`);
   } catch (error) {
     console.error("OAuth callback error:", error);
     res.status(500).json({ error: "Authentication failed" });
@@ -404,6 +410,36 @@ app.get("/me", validateJWTStatus, autoRefreshToken, async (req, res) => {
   }
 });
 
+// Serve React build files in production
+if (process.env.NODE_ENV === "production") {
+  // Serve React build files
+  app.use(express.static(path.join(__dirname, "../Frontend/client/dist")));
+
+  // Handle React routing - serve index.html for any non-API routes
+  app.get("*", (req, res) => {
+    // Don't serve index.html for API routes
+    if (
+      req.path.startsWith("/auth") ||
+      req.path.startsWith("/search") ||
+      req.path.startsWith("/user") ||
+      req.path.startsWith("/playlist") ||
+      req.path.startsWith("/token") ||
+      req.path.startsWith("/logout") ||
+      req.path.startsWith("/recommendations") ||
+      req.path.startsWith("/recently-played")
+    ) {
+      return;
+    }
+    res.sendFile(path.join(__dirname, "../Frontend/client/dist/index.html"));
+  });
+}
+
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
+  if (process.env.NODE_ENV === "production") {
+    console.log(`React app available at: http://localhost:${port}`);
+  } else {
+    console.log(`React development server: http://localhost:3001`);
+    console.log(`Backend API: http://localhost:${port}`);
+  }
 });
