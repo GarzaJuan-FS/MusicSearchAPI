@@ -4,6 +4,8 @@ console.log("SPOTIFY_REDIRECT_URI loaded:", process.env.SPOTIFY_REDIRECT_URI);
 const express = require("express");
 const cors = require("cors");
 const path = require("path");
+const querystring = require("querystring");
+const axios = require("axios");
 const app = express();
 const port = process.env.PORT || 3000;
 
@@ -31,6 +33,7 @@ const {
   getArtistAlbums,
   getArtistTopTracks,
   getRecommendations,
+  generateRandomString,
 } = require("./spotify");
 const db = require("./database");
 
@@ -56,35 +59,82 @@ app.get("/enhanced-test.html", (req, res) => {
   res.sendFile(path.join(__dirname, "enhanced-test.html"));
 });
 
-// Auth routes
-app.get("/auth/spotify", (req, res) => {
-  const authURL = getSpotifyAuthURL();
+// Spotify OAuth routes (following official documentation pattern)
+app.get("/login", (req, res) => {
+  const state = generateRandomString(16);
+  const scope =
+    "user-read-private user-read-email playlist-read-private playlist-read-collaborative";
+
+  const authURL =
+    "https://accounts.spotify.com/authorize?" +
+    querystring.stringify({
+      response_type: "code",
+      client_id: process.env.SPOTIFY_CLIENT_ID,
+      scope: scope,
+      redirect_uri: process.env.SPOTIFY_REDIRECT_URI,
+      state: state,
+    });
+
   console.log("Generated Spotify auth URL:", authURL);
   res.redirect(authURL);
 });
 
-app.get("/auth/spotify/callback", async (req, res) => {
-  const { code, error } = req.query;
+app.get("/callback", async (req, res) => {
+  const { code, state, error } = req.query;
 
   if (error) {
-    return res.status(400).json({ error: "Authorization denied" });
+    console.log("OAuth error:", error);
+    return res.redirect(`${process.env.FRONTEND_URL}/?error=${error}`);
+  }
+
+  if (!state) {
+    console.log("State mismatch");
+    return res.redirect(`${process.env.FRONTEND_URL}/?error=state_mismatch`);
   }
 
   try {
-    // Exchange code for tokens
-    const tokenData = await exchangeCodeForToken(code);
+    // Exchange code for tokens using official Spotify pattern
+    const authOptions = {
+      url: "https://accounts.spotify.com/api/token",
+      form: {
+        code: code,
+        redirect_uri: process.env.SPOTIFY_REDIRECT_URI,
+        grant_type: "authorization_code",
+      },
+      headers: {
+        "content-type": "application/x-www-form-urlencoded",
+        Authorization:
+          "Basic " +
+          Buffer.from(
+            process.env.SPOTIFY_CLIENT_ID +
+              ":" +
+              process.env.SPOTIFY_CLIENT_SECRET
+          ).toString("base64"),
+      },
+      json: true,
+    };
+
+    const response = await axios.post(
+      authOptions.url,
+      querystring.stringify(authOptions.form),
+      {
+        headers: authOptions.headers,
+      }
+    );
+
+    const { access_token, refresh_token } = response.data;
 
     // Get user profile
-    const userProfile = await getSpotifyUserProfile(tokenData.access_token);
+    const userProfile = await getSpotifyUserProfile(access_token);
 
     // Save user to database
     const userData = {
       spotify_id: userProfile.id,
       display_name: userProfile.display_name,
       email: userProfile.email,
-      access_token: tokenData.access_token,
-      refresh_token: tokenData.refresh_token,
-      expires_in: tokenData.expires_in,
+      access_token: access_token,
+      refresh_token: refresh_token,
+      expires_in: response.data.expires_in,
     };
 
     await saveUserToDB(userData);
@@ -92,11 +142,13 @@ app.get("/auth/spotify/callback", async (req, res) => {
     // Generate JWT
     const jwt = generateJWT(userProfile.id, userProfile.id);
 
+    console.log(`User ${userProfile.display_name} logged in successfully`);
+
     // Redirect to frontend with token
-    res.redirect(`http://127.0.0.1:3001?token=${jwt}`);
+    res.redirect(`${process.env.FRONTEND_URL}/?token=${jwt}`);
   } catch (error) {
     console.error("OAuth callback error:", error);
-    res.status(500).json({ error: "Authentication failed" });
+    res.redirect(`${process.env.FRONTEND_URL}/?error=invalid_token`);
   }
 });
 
@@ -434,8 +486,10 @@ if (process.env.NODE_ENV === "production") {
   });
 }
 
-app.listen(port, () => {
+app.listen(port, "127.0.0.1", () => {
   console.log(`Server listening on port ${port}`);
+  console.log(`Backend API: http://localhost:${port}`);
+  console.log(`Frontend: http://localhost:8889`);
   if (process.env.NODE_ENV === "production") {
     console.log(`React app available at: http://localhost:${port}`);
   } else {

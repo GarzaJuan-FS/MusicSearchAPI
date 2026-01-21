@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Spotify OAuth Test - Official Pattern</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        max-width: 600px;
+        margin: 50px auto;
+        padding: 20px;
+      }
+      .button {
+        padding: 15px 30px;
+        font-size: 16px;
+        margin: 10px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      .spotify {
+        background: #1db954;
+        color: white;
+      }
+      .test {
+        background: #ff6b35;
+        color: white;
+      }
+      .info {
+        background: #f0f0f0;
+        padding: 20px;
+        border-radius: 5px;
+        margin: 20px 0;
+      }
+      code {
+        background: #f5f5f5;
+        padding: 2px 5px;
+        border-radius: 3px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>🎵 Spotify Music Search - Official OAuth</h1>
+
+    <div class="info">
+      <h3>📋 Setup Required:</h3>
+      <p>In your Spotify Developer Dashboard, add this redirect URI:</p>
+      <code>http://127.0.0.1:8888/callback</code>
+
+      <p><strong>Your servers should be running on:</strong></p>
+      <ul>
+        <li>Backend: <code>http://127.0.0.1:8888</code></li>
+        <li>Frontend: <code>http://127.0.0.1:8889</code></li>
+      </ul>
+    </div>
+
+    <button class="button spotify" onclick="loginWithSpotify()">
+      🎵 Login with Spotify (Official Pattern)
+    </button>
+
+    <button class="button test" onclick="testBackend()">
+      🔗 Test Backend Direct
+    </button>
+
+    <div
+      id="debug"
+      style="
+        margin-top: 20px;
+        padding: 20px;
+        background: #f9f9f9;
+        border-radius: 5px;
+      "
+    >
+      <h3>Debug Info:</h3>
+      <div id="debugOutput">Click a button to test...</div>
+    </div>
+
+    <script>
+      function loginWithSpotify() {
+        const debugOutput = document.getElementById("debugOutput");
+        debugOutput.innerHTML =
+          "<p><strong>Redirecting to:</strong> http://127.0.0.1:8888/login</p>";
+        debugOutput.innerHTML +=
+          "<p><strong>This should redirect to Spotify OAuth...</strong></p>";
+
+        // Use the official Spotify pattern
+        window.location.href = "http://127.0.0.1:8888/login";
+      }
+
+      function testBackend() {
+        const debugOutput = document.getElementById("debugOutput");
+        debugOutput.innerHTML =
+          "<p><strong>Testing backend connectivity...</strong></p>";
+
+        fetch("http://127.0.0.1:8888/")
+          .then((response) => {
+            debugOutput.innerHTML += `<p>✅ Backend responding: ${response.status}</p>`;
+          })
+          .catch((error) => {
+            debugOutput.innerHTML += `<p>❌ Backend error: ${error.message}</p>`;
+          });
+      }
+
+      // Check for token in URL (after OAuth callback)
+      window.onload = function () {
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get("token");
+        const error = urlParams.get("error");
+
+        if (token) {
+          document.getElementById(
+            "debugOutput"
+          ).innerHTML = `<p>✅ <strong>SUCCESS!</strong> Received token: ${token.substring(
+            0,
+            20
+          )}...</p>`;
+        } else if (error) {
+          document.getElementById(
+            "debugOutput"
+          ).innerHTML = `<p>❌ <strong>ERROR:</strong> ${error}</p>`;
+        }
+      };
+    </script>
+  </body>
+</html>

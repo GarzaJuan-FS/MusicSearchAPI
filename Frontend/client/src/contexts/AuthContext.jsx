@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const getSpotifyAuthUrl = () => {
-    const url = "/auth/spotify";
+    const url = "http://127.0.0.1:8888/login";
     console.log("Generated auth URL:", url);
     return url;
   };

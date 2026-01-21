@@ -304,4 +304,5 @@ module.exports = {
   getArtistAlbums,
   getArtistTopTracks,
   getRecommendations,
+  generateRandomString,
 };

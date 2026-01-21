@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Spotify Auth Test</title>
+  </head>
+  <body>
+    <h1>Spotify Authentication Test</h1>
+    <p>Click the button below to test Spotify OAuth directly:</p>
+
+    <button
+      onclick="testSpotifyAuth()"
+      style="
+        padding: 20px;
+        font-size: 16px;
+        background: #1db954;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      "
+    >
+      🎵 Login with Spotify (Direct Test)
+    </button>
+
+    <button
+      onclick="testBackendRedirect()"
+      style="
+        padding: 20px;
+        font-size: 16px;
+        background: #ff6b35;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-left: 10px;
+      "
+    >
+      🔗 Test Backend Redirect
+    </button>
+
+    <div
+      id="debug"
+      style="
+        margin-top: 20px;
+        padding: 20px;
+        background: #f0f0f0;
+        border-radius: 5px;
+      "
+    >
+      <h3>Debug Info:</h3>
+      <div id="debugOutput">Click the button to see debug information...</div>
+    </div>
+
+    <script>
+      function testSpotifyAuth() {
+        const debugOutput = document.getElementById("debugOutput");
+
+        // Clear previous debug info
+        debugOutput.innerHTML = "";
+
+        // Add debug info
+        debugOutput.innerHTML +=
+          "<p><strong>Step 1:</strong> Preparing Spotify OAuth URL...</p>";
+
+        // Spotify OAuth parameters
+        const CLIENT_ID = "8bd38eaa3efe4963828fe2b03a542a3e";
+        const REDIRECT_URI = "http://127.0.0.1:3000/auth/spotify/callback";
+        const SCOPE =
+          "user-read-private user-read-email playlist-read-private playlist-read-collaborative";
+        const STATE = Math.random().toString(36).substring(2, 15);
+
+        // Build the Spotify authorization URL
+        const spotifyAuthUrl =
+          `https://accounts.spotify.com/authorize?` +
+          `response_type=code&` +
+          `client_id=${CLIENT_ID}&` +
+          `scope=${encodeURIComponent(SCOPE)}&` +
+          `redirect_uri=${encodeURIComponent(REDIRECT_URI)}&` +
+          `state=${STATE}`;
+
+        debugOutput.innerHTML += `<p><strong>Step 2:</strong> Generated URL: <br><code style="word-break: break-all;">${spotifyAuthUrl}</code></p>`;
+        debugOutput.innerHTML +=
+          "<p><strong>Step 3:</strong> Opening in new window...</p>";
+
+        // Open in new window instead of redirecting
+        window.open(spotifyAuthUrl, "_blank");
+      }
+
+      function testBackendRedirect() {
+        const debugOutput = document.getElementById("debugOutput");
+        debugOutput.innerHTML =
+          "<p><strong>Testing backend redirect...</strong></p>";
+        debugOutput.innerHTML +=
+          "<p>Opening http://127.0.0.1:3000/auth/spotify in new window...</p>";
+
+        // Test the backend endpoint directly
+        window.open("http://127.0.0.1:3000/auth/spotify", "_blank");
+      }
+    </script>
+  </body>
+</html>
